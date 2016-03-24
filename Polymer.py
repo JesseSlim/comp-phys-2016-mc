@@ -26,8 +26,9 @@ class Polymer:
                 for j in range(0,self.size):
                     dx = self.bead_position[j, 0] - new_bead_x
                     dy = self.bead_position[j, 1] - new_bead_y
-                    d = math.sqrt(dx**2+dy**2)
-                    E += 4 * self.epsilon *((self.sigma / d)**12 - (self.sigma/d)**6)
+                    if (dx < 3 and dy < 3): # Cut-off distance
+                        d = math.sqrt(dx**2+dy**2)
+                        E += 4 * self.epsilon *((self.sigma / d)**12 - (self.sigma/d)**6)
                 theta_weight[i] = math.exp(-E/self.T)
                 theta_weight_sum += theta_weight[i]
         
