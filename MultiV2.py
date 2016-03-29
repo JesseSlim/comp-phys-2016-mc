@@ -63,7 +63,6 @@ def workerFunction(Settings, q, q2): # This function controls the workers and de
         if (not q.empty()):
             dicti = q.get();
             if (dicti == 'Exit'):
-                print("Exit");
                 break;
 
             if (dicti['Task'] == 'addBead'):
@@ -119,12 +118,6 @@ def main(Settings,q,q2,BasePolymer,max_polymer_size): # Wrapper for main to secu
     upLimInput = int(sys.argv[1]);
     print("Start");
     start_time = time.time();
-    
-    # Create a subfolder in Data were we are going to save everything
-    i = 1;
-    while (os.path.isfile(str(os.getcwd())+"/Data/Survivors_"+str(sys.argv[2])+"_"+str(i)+".npy")):
-        i+=1;
-    file = str(os.getcwd())+"/Data/Survivors_"+str(sys.argv[2])+"_"+str(i);
     
     # Create a list of all polymers
     polarray = []
@@ -197,6 +190,13 @@ def main(Settings,q,q2,BasePolymer,max_polymer_size): # Wrapper for main to secu
         print("PolymerSize = "+str(polymer_size)+" Living = "+str(len(polarray))+" Just died = "+str(dead));
     print("Exiting");
     
+    
+    # Create a subfolder in Data were we are going to save everything
+    i = 1;
+    while (os.path.isfile(str(os.getcwd())+"/Data/Survivors_"+str(sys.argv[2])+"_"+str(i)+".npy")):
+        i+=1
+    file = str(os.getcwd())+"/Data/Survivors_"+str(sys.argv[2])+"_"+str(i);
+    
     # Now we have to save the polymers to a data file
     np.savez(file, Polymers=polarray, Settings=Settings);
     # Clear some memory
@@ -229,6 +229,10 @@ if __name__ == '__main__':
             q.put('Exit');
         for i in range(0, len(cpuList)):
             cpuList[i].join()
+        while (not q.empty()):
+            t = q.get();
+        while (not q2.empty()):
+            t = q2.get();
         Settings['T'] = Settings['T'] + 0.1;
 
             # Stop the workers when their work is done - Good job guys
