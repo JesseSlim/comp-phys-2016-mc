@@ -19,7 +19,7 @@ polymer_size = 2                      # Amount of beads in the polymer
 max_polymer_size = 250                # Maximum polymer size
 polymer_count = 1E5                   # Amount of polymers that we are simulating
 
-T = 0.1                               # Temperature in kelvin
+T = 1                                 # Temperature in kelvin
 epsilon = 0.25                        # Epsilon voor de lennard Jones
 sigma = 0.8                           # Sigma voor de Lennard Jones
 
@@ -57,10 +57,13 @@ def restart_program():
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
 def workerFunction(Settings, q, q2): # This function controls the workers and defines what they should do
+    print(Settings);
+    p = 0;
     while (1):
         if (not q.empty()):
             dicti = q.get();
             if (dicti == 'Exit'):
+                print("Exit");
                 break;
 
             if (dicti['Task'] == 'addBead'):
