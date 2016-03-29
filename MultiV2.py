@@ -9,7 +9,6 @@ import math
 import time
 import random
 import os
-import msvcrt
 import sys
 import psutil
 
@@ -139,10 +138,6 @@ def main(Settings,q,q2,BasePolymer,max_polymer_size): # Wrapper for main to secu
         if (polymer_size > polymer_start_size):
             print("Iteration took: "+str((time.time() - steptime))+"\t\t Speed = "+(str(Amount / (time.time() - steptime))));
         steptime = time.time();
-        if msvcrt.kbhit():
-            if (msvcrt.getch() == 'q'):
-                break
-            print ("Key pressed: "+ str(msvcrt.getch()))
                
         # Add a bead to every polymer. We send this task to the workers.
         c = 0;
