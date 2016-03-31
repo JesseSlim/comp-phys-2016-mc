@@ -2,35 +2,42 @@ import numpy as np
 import scipy.spatial
 import sys
 
-class Perm:
+def print_fl(output):
+    print(output)
+    sys.stdout.flush()
+
+class PERMSimulation:
     n = 0
     r = None
     max_size = 250
     n_dim = 2
     epsilon = 0.25
     sigma = 0.8
+    F = 0.0
     T = 1.0
     d = 1.0
-    F = 0.01
     n_theta = 6
     alpha_lo = 1.2
     # alpha_hi = 1.8
     pol_weight_renormalization = 1/(0.75*6) # renormalization factor recommended by the book
     target_population = 0
+    F = 0.0
+    enable_LJ_interaction = True
     
     capital_Ws = None
     bead_energies = None
+    pol_energies = None
     pol_weights = None
     
     iteration = 0
     
     results_r_e2e = None
     results_r_gyration = None
+    results_r_end = None
     results_pol_weights = None
+    results_energies = None
     
-    def initialise(self, nIn, targetIn, F):
-        self.F = F;
-        
+    def initialise(self, nIn, targetIn):
         self.n = nIn
         self.target_population = targetIn
         self.r = np.zeros((self.n, self.max_size, self.n_dim))
@@ -40,13 +47,16 @@ class Perm:
         
         self.results_r_e2e = np.zeros((self.n, self.max_size))
         self.results_r_gyration = np.zeros((self.n, self.max_size))
+        self.results_r_end = np.zeros((self.n, self.max_size, self.n_dim))
         self.results_pol_weights = np.zeros((self.n, self.max_size))
+
+        self.results_energies = np.zeros((self.n, self.max_size))
         
         # initialise second bead at (d,0-) for all polymers
-        self.r[:,1,0] = self.d
-        self.iteration = 1
-        self.pol_weights[:,0:3] = 1.0
+        #self.r[:,1,0] = self.d
+        self.pol_weights[:,0] = 1.0
         
+        self.iteration = 0
         self.calculate_results()
         
     # calculate LJ-potential energy
@@ -54,6 +64,10 @@ class Perm:
         # note that we expect squared distances to be input, so the r^12 and r^6 terms translate to r_sq^6 and r_sq^3 terms
         return 4*self.epsilon*( (self.sigma / sq_dist)**6 - (self.sigma / sq_dist)**3 )
         #return np.zeros_like(sq_dist)
+        
+    def W_F(self, dr):
+        # let the force act along the x-direction
+        return dr[:,:,0] * self.F
     
     # add the next bead to the entire current population
     def add_beads(self):
@@ -66,15 +80,19 @@ class Perm:
         candidate_dr[:,:,1] = self.d * np.sin(candidate_angles)
         
         candidate_r = candidate_dr + self.r[:,self.iteration,np.newaxis,:] 
-        theta_energies = np.zeros((self.n, self.n_theta))
         
-        for i in range(0, self.n):
-            # squared euclidean is probably faster, and we'll square it anyway in the LJ calculation
-            sq_distances = scipy.spatial.distance.cdist(candidate_r[i,:,:], self.r[i,0:self.iteration+1,:], 'sqeuclidean')
-            lj_potentials = self.V_LJ(sq_distances)
-            theta_energies[i,:] = np.sum(lj_potentials, axis = 1)
-        theta_energies[:,:] = theta_energies[:,:] + self.F * candidate_dr[:,:,0];
-            
+        # energy consists of a work term related to the force ...
+        theta_energies = -1 * self.W_F(candidate_dr)
+        
+        # ... and a potential term related to the bead interactions
+        if self.enable_LJ_interaction:
+            for i in range(0, self.n):
+                # squared euclidean is probably faster, and we'll square it anyway in the LJ calculation
+                sq_distances = scipy.spatial.distance.cdist(candidate_r[i,:,:], self.r[i,0:self.iteration+1,:], 'sqeuclidean')
+                lj_potentials = self.V_LJ(sq_distances)
+                theta_energies[i,:] += np.sum(lj_potentials, axis = 1)
+            theta_energies[:,:] = theta_energies[:,:] + self.F * candidate_dr[:,:,0];
+
         # we scale nans to zero in the following section; if probabilities get too low the polymer gets pruned anyway
         theta_boltzmann = np.nan_to_num(np.exp(- theta_energies / self.T))
         self.capital_Ws[:,self.iteration] = np.sum(theta_boltzmann, axis = 1)        
@@ -117,6 +135,8 @@ class Perm:
     def calculate_results(self):
         self.results_pol_weights[:,self.iteration] = self.pol_weights[:,self.iteration]
         self.results_r_e2e[:,self.iteration] = np.linalg.norm(self.r[:,self.iteration,:], axis = 1)
+        self.results_r_end[:,self.iteration,:] = self.r[:,self.iteration,:]
+        self.results_energies[:,self.iteration] = np.sum(self.bead_energies[:,:], axis = 1)
         
         r_means = np.mean(self.r[:,0:(self.iteration + 1),:], axis=1)
         dr_sqs = (self.r[:,0:(self.iteration + 1),:] - r_means[:,np.newaxis,:])**2
@@ -166,7 +186,10 @@ class Perm:
         #enrich_limits = sorted_weights[-pruned]
         
         #enrich_candidates = np.ravel(np.where(self.pol_weights[:,self.iteration] >= enrich_limits))
-        enrich_candidates = sorted_weights[-pruned:]
+        if (pruned>0):
+            enrich_candidates = sorted_weights[-pruned:]
+        else:
+            enrich_candidates = np.array([], dtype=np.int)
         
         self.pol_weights[enrich_candidates,self.iteration] *= 0.5
         
@@ -181,14 +204,38 @@ class Perm:
         assert self.n == self.r.shape[0]
         
         return pruned, enriched, average_weight
-    
+        
     def run_simulation(self):
         while(self.iteration < self.max_size - 1):
             # add a new bead across the population
             self.add_beads()
-            self.calculate_results();
+            self.calculate_results()
             
             # do pruning-enrichment magic
-            deleted, enriched, average_weight = self.prune_enrich()
+            if self.iteration > 1:
+                deleted, enriched, average_weight = self.prune_enrich()
+            else:
+                deleted, enriched, average_weight = (0,0,np.mean(self.pol_weights[:,self.iteration]))
             
             print_fl("I: %d\t n: %d\t p: %d\t e: %d\t w: %e" % (self.iteration, self.n, deleted, enriched, average_weight))
+
+    def save_results(self, filename):
+        result_variables = [rm for rm in dir(self) if rm.startswith("result_")]
+        results = dict()
+        for rm in result_variables:
+            results[rm[7:]] = getattr(self, rm)
+
+        results["n"] = self.n
+        results["r"] = self.r
+        results["max_size"] = self.max_size
+        results["n_dim"] = self.n_dim
+        results["epsilon"] = self.epsilon
+        results["sigma"] = self.sigma
+        results["T"] = self.T
+        results["d"] = self.d
+        results["n_theta"] = self.n_theta
+        results["F"] = self.F
+        results["enable_LJ_interaction"] = self.enable_LJ_interaction
+        results["pol_weight_renormalization"] = self.pol_weight_renormalization
+
+        np.savez(filename, **results)
