@@ -22,6 +22,7 @@ polymer_count = 1E5                   # Amount of polymers that we are simulatin
 T = 1                                 # Temperature in kelvin
 epsilon = 0.25                        # Epsilon voor de lennard Jones
 sigma = 0.8                           # Sigma voor de Lennard Jones
+Force = 0;														# Force wit which we pull
 
 theta = 6                             # Number of angles
 theta_weight = np.zeros([theta,1])    # Weight of angles
@@ -33,6 +34,7 @@ Settings = {
     'T': T,
     'epsilon': epsilon,
     'sigma': sigma,
+    'Force': Force
             };
 
 # Create standard Polymer
@@ -50,11 +52,6 @@ q  = Queue();                         # Queue to communicate the jobs
 q2 = Queue();                         # Queue to communicate the results
 
 # Define functions
-
-def restart_program():
-    """Restarts the current program
-    """
-    os.execv(sys.executable, [sys.executable] + sys.argv)
 
 def workerFunction(Settings, q, q2): # This function controls the workers and defines what they should do
     print(Settings);
@@ -89,10 +86,11 @@ def addBead(Settings, var): # This function adds a bead to a polymer
             for j in range(0,var['Size']):
                 dx = var['BeadPosition'][j, 0] - new_bead_x
                 dy = var['BeadPosition'][j, 1] - new_bead_y
-                if (dx < 3 and dy < 3): # Cut-off distance
+                if (abs(dx) < 3 and abs(dy) < 3): # Cut-off distance
                     d = math.sqrt(dx**2+dy**2)
                     E += 4 * epsilon *((sigma / d)**12 - (sigma/d)**6)
             theta_weight[i] = math.exp(-E/T)
+            theta_weight[i] += math.cos(math.atan2(dy,dx))*Settings['Force'];
             theta_weight_sum += theta_weight[i]
     
     # Next we use a roulette weel algorith to determine which direction we go
@@ -111,7 +109,19 @@ def addBead(Settings, var): # This function adds a bead to a polymer
             break
     if (var['Size'] == 3):
         var['Weight3'] = var['Weight']
+        
+    var['Length'] = calculateLength(var)
+    var['GyrationRadius'] = calculateGyrationRadius(var)
     return var
+
+def calculateLength(Polymer):
+    return np.linalg.norm(Polymer['BeadPosition'][-1,:])
+
+def calculateGyrationRadius(Polymer):
+    r_mean = np.mean(Polymer['BeadPosition'], axis=0)
+    r_dev_sq = (Polymer['BeadPosition'] - r_mean)**2
+    return 1/Polymer['Size'] * np.sum(r_dev_sq)
+    
     
 def main(Settings,q,q2,BasePolymer,max_polymer_size): # Wrapper for main to secure local data
     polymer_size = 2;
@@ -154,7 +164,23 @@ def main(Settings,q,q2,BasePolymer,max_polymer_size): # Wrapper for main to secu
                 jobCount -= 1;
             else:
                 time.sleep(0.001);
-    
+                
+        pollengths = []
+        polweights = []
+        polgyrations = []
+        # extract results from the polymers
+        for i in range(0, len(polarray)):
+            pollengths.append(polarray[i]['Length'])
+            polweights.append(polarray[i]['Weight'])
+            polgyrations.append(polarray[i]['GyrationRadius'])
+        
+        i = 1;
+        file = str(os.getcwd())+"/Data/Save_"+str(sys.argv[2])+"_"+str(polymer_size + 1) + "_"+str(i)+".npz"
+        while (os.path.isfile(file)):
+            file = str(os.getcwd())+"/Data/Save_"+str(sys.argv[2])+"_"+str(polymer_size + 1) + "_"+str(i)+".npz"
+            i+=1
+        np.savez(file, Lengths = pollengths, Weights = polweights, Gyration = polgyrations, Settings=Settings);
+            
         # Next we need to prune the polymers
         #We do this in the main thread because it shouldn't take much time and saves overhead
         TotWeight = 0;
@@ -162,7 +188,7 @@ def main(Settings,q,q2,BasePolymer,max_polymer_size): # Wrapper for main to secu
         for i in range(0,Amount):
             TotWeight += polarray[i]['Weight'];
         AvgWeight = TotWeight / Amount
-        print("AVgWeight = "+str(AvgWeight)+" Amomunt = "+str(Amount))
+        print("AvgWeight = "+str(AvgWeight)+" Amount = "+str(Amount))
         upLim = 2 ** (math.log(Amount,10)-upLimInput)
         lowLim = 1.5 ** (math.log(Amount,10)-1)
         for i in range(0,Amount):
@@ -193,7 +219,7 @@ def main(Settings,q,q2,BasePolymer,max_polymer_size): # Wrapper for main to secu
     
     # Create a subfolder in Data were we are going to save everything
     i = 1;
-    while (os.path.isfile(str(os.getcwd())+"/Data/Survivors_"+str(sys.argv[2])+"_"+str(i)+".npy")):
+    while (os.path.isfile(str(os.getcwd())+"/Data/Survivors_"+str(sys.argv[2])+"_"+str(i)+".npz")):
         i+=1
     file = str(os.getcwd())+"/Data/Survivors_"+str(sys.argv[2])+"_"+str(i);
     
@@ -233,6 +259,6 @@ if __name__ == '__main__':
             t = q.get();
         while (not q2.empty()):
             t = q2.get();
-        Settings['T'] = Settings['T'] + 0.1;
-
-            # Stop the workers when their work is done - Good job guys
+        Settings['Force'] = Settings['Force'] + 0.01;
+        if (Settings['Force'] > 0.5):
+            break;

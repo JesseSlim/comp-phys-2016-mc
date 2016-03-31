@@ -1,0 +1,23 @@
+%% RESET
+clear all;
+close all;
+clc;
+format compact;
+
+%% LOAD
+Folder = 'ForceData';
+Data = {};
+Variable = 'Force';
+
+dirList = what(Folder)
+for i = 1:1:max(size(dirList.mat))
+    File = strcat(Folder, '/', dirList.mat(i));
+    Case = load(File{1}, '-mat');
+    Data{i} = Case.Polymers;
+end
+
+%% PROCESS
+L = zeros(size(Data,2), 250);
+for i = 1:1:size(Data,2)
+   Data{1,1}{1,1}
+end
