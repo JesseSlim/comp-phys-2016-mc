@@ -1,6 +1,8 @@
 from Multi import Multi
 from Perm import PERMSimulation
 import time
+import os
+import sys
 import numpy as np
 import numba as jit
     
@@ -34,9 +36,9 @@ def Worker(qm, qw):
         testSim.run_simulation()
         
         i = 1;
-        file = str(os.getcwd())+"/Data/Save_"+str(sys.argv[2])+"_"+str(polymer_size + 1) + "_"+str(i)+".npz"
+        file = str(os.getcwd())+"/Data/Save_"+str(i)+".npz"
         while (os.path.isfile(file)):
-            file = str(os.getcwd())+"/Data/Save_"+str(sys.argv[2])+"_"+str(polymer_size + 1) + "_"+str(i)+".npz"
+            file = str(os.getcwd())+"/Data/Save_"+str(i)+".npz"
             i+=1
         testSim.save_results(file)
         
