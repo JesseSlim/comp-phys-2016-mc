@@ -33,6 +33,13 @@ def Worker(qm, qw):
         testSim.F = Var[4];
         testSim.run_simulation()
         
+        i = 1;
+        file = str(os.getcwd())+"/Data/Save_"+str(sys.argv[2])+"_"+str(polymer_size + 1) + "_"+str(i)+".npz"
+        while (os.path.isfile(file)):
+            file = str(os.getcwd())+"/Data/Save_"+str(sys.argv[2])+"_"+str(polymer_size + 1) + "_"+str(i)+".npz"
+            i+=1
+        testSim.save_results(file)
+        
         qw.put(int(Data[1]));
     
 if __name__ == '__main__':
