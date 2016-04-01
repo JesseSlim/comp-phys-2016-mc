@@ -218,13 +218,12 @@ class PERMSimulation:
             print_fl("I: %d\t n: %d\t p: %d\t e: %d\t w: %e" % (self.iteration, self.n, deleted, enriched, average_weight))
 
     def save_results(self, filename):
-        result_variables = [rm for rm in dir(self) if rm.startswith("result_")]
+        result_variables = [rm for rm in dir(self) if rm.startswith("results_")]
         results = dict()
         for rm in result_variables:
-            results[rm[7:]] = getattr(self, rm)
+            results[rm[8:]] = getattr(self, rm)
 
         results["n"] = self.n
-        results["r"] = self.r
         results["max_size"] = self.max_size
         results["n_dim"] = self.n_dim
         results["epsilon"] = self.epsilon
@@ -235,5 +234,7 @@ class PERMSimulation:
         results["F"] = self.F
         results["enable_LJ_interaction"] = self.enable_LJ_interaction
         results["pol_weight_renormalization"] = self.pol_weight_renormalization
+
+        results["r"] = self.r
 
         np.savez(filename, **results)
