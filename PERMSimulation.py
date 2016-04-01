@@ -13,6 +13,7 @@ class PERMSimulation:
     n_dim = 2
     epsilon = 0.25
     sigma = 0.8
+    F = 0.0
     T = 1.0
     d = 1.0
     n_theta = 6
@@ -90,6 +91,7 @@ class PERMSimulation:
                 sq_distances = scipy.spatial.distance.cdist(candidate_r[i,:,:], self.r[i,0:self.iteration+1,:], 'sqeuclidean')
                 lj_potentials = self.V_LJ(sq_distances)
                 theta_energies[i,:] += np.sum(lj_potentials, axis = 1)
+            theta_energies[:,:] = theta_energies[:,:] + self.F * candidate_dr[:,:,0];
 
         # we scale nans to zero in the following section; if probabilities get too low the polymer gets pruned anyway
         theta_boltzmann = np.nan_to_num(np.exp(- theta_energies / self.T))
