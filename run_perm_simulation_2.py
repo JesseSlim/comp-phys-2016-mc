@@ -5,12 +5,8 @@ import time
 
 sim = PERMSimulation()
 
-#Ts = np.linspace(0.2, 6.0, 30)
-#Ts = np.arange(4.4, 6.2, 0.2)
-#Fs = np.concatenate((np.linspace(0.0, 0.1, 11), np.linspace(0.2, 1.0, 9)))
-
-Ts = np.array([0.2, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
-Fs = np.linspace(4.0, 8.0, 9)
+# Ts = np.linspace(0.2, 6.0, 30)
+Ts = np.linspace(0.02, 3.0, 150)
 
 sim_id = str(sys.argv[1])
 
@@ -23,11 +19,12 @@ else:
 
 num_pol = int(sys.argv[3])
 
-Fblock_start = int(sys.argv[4])
-Fblock_end = int(sys.argv[5])
-Fs = Fs[Fblock_start:Fblock_end]
+Tblock_start = int(sys.argv[4])
+Tblock_end = int(sys.argv[5])
+Ts = Ts[Tblock_start:Tblock_end]
 
 print("Fs for this simulation batch: " + str(Fs))
+print("Ts for this simulation batch: " + str(Ts))
 print("Performing a %s simulation" % ("saw" if do_saw else "fjc"))
 
 for F in Fs:

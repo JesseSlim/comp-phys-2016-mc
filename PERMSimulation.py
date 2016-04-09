@@ -216,6 +216,8 @@ class PERMSimulation:
                 deleted, enriched, average_weight = self.prune_enrich()
             else:
                 deleted, enriched, average_weight = (0,0,np.mean(self.pol_weights[:,self.iteration]))
+
+            self.pol_weights[:,self.iteration] /= average_weight
             
             print_fl("I: %d\t n: %d\t p: %d\t e: %d\t w: %e" % (self.iteration, self.n, deleted, enriched, average_weight))
 
