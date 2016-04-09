@@ -73,13 +73,17 @@ class PERMSimulation:
     # add the next bead to the entire current population
     def add_beads(self):
         # the following code is 2d-specific and needs to be adjusted if the dimensionality is changed
+
+        # generate candidate angles
         angle_offsets = np.random.sample((self.n,1)) * (2*np.pi) / self.n_theta
         candidate_angles = np.tile(np.linspace(0, 2*np.pi, self.n_theta, endpoint=False), (self.n, 1)) + angle_offsets
         
+        # generate candidate bead offsets
         candidate_dr = np.zeros((self.n, self.n_theta, self.n_dim)) 
         candidate_dr[:,:,0] = self.d * np.cos(candidate_angles)
         candidate_dr[:,:,1] = self.d * np.sin(candidate_angles)
         
+        # calculate candidate bead positions
         candidate_r = candidate_dr + self.r[:,self.iteration,np.newaxis,:] 
         
         # energy consists of a work term related to the force ...
@@ -109,7 +113,6 @@ class PERMSimulation:
         self.r[:,self.iteration+1,:] = candidate_r[np.arange(self.n), selected_thetas, :]
         self.bead_energies[:,self.iteration+1] = theta_energies[np.arange(self.n),selected_thetas]
         
-        #if self.iteration > 1:
         self.pol_weights[:,self.iteration+1] = self.pol_weights[:,self.iteration] * self.capital_Ws[:,self.iteration] * self.pol_weight_renormalization
         
         self.iteration += 1
@@ -144,26 +147,12 @@ class PERMSimulation:
         
     def prune_enrich(self):
         average_weight = np.mean(self.pol_weights[:,self.iteration])
-        # average_weight_at_3 = np.mean(self.pol_weights[:,2])
-        
-        #self.alpha_hi = 2 ** (np.math.log(self.n,10)-2)
-        #self.alpha_lo = 1.5 ** (np.math.log(self.n,10)-1)
         
         # select the polymers eligible for pruning
         # calculate weights relative to the weight at length 3 as recommended by the book
         prune_limits = self.alpha_lo * average_weight / self.pol_weights[:,2]
         
-        # select p/e limits using the target population size
-        #sorted_weights = np.sort(self.pol_weights[:,self.iteration])
-        #sorted_weights = sorted_weights[sorted_weights > 0.0]
-        #pop_diff = self.n - self.target_population
-        #if pop_diff > 0:
-        #    prune_limits = sorted_weights[int(pop_diff*1.5)]
-        #    enrich_limits = sorted_weights[-int(pop_diff / 8)]
-        #else:
-        #    prune_limits = 0.0
-        #    enrich_limits = sorted_weights[int(pop_diff)]
-        
+        # prune candidate indices
         prune_candidates = np.ravel(np.where(self.pol_weights[:,self.iteration] < prune_limits))
         prune_candidates = prune_candidates[0:int(self.n/4)] # prune at most one quarter of the population
         prune_actions = np.random.sample(prune_candidates.shape) < 0.5
@@ -176,28 +165,29 @@ class PERMSimulation:
         #we do moving of the polymers now!
         # self.delete_polymers(prune_deletions)
         
+        # calculate number of prunings
         pruned = np.size(prune_deletions)
 
-        # select the polymers eligible for enriching
-        #enrich_limits = self.alpha_hi * average_weight / self.pol_weights[:,2]
-        # make sure we enrich as many polymers as we prune
+        # sort the remaining polymers by weight and enrich the top ones
         sorted_weights = np.argsort(self.pol_weights[:,self.iteration])
-        #print(sorted_weights.shape)
-        #enrich_limits = sorted_weights[-pruned]
         
-        #enrich_candidates = np.ravel(np.where(self.pol_weights[:,self.iteration] >= enrich_limits))
+        # make sure we enrich as many polymers as we prune
+        # to keep population size stable
         if (pruned>0):
             enrich_candidates = sorted_weights[-pruned:]
         else:
             enrich_candidates = np.array([], dtype=np.int)
         
+        # reduce polymer weights
         self.pol_weights[enrich_candidates,self.iteration] *= 0.5
         
+        # move enriched polymers over into the pruned ones
         self.move_polymers(enrich_candidates, prune_deletions)
         
         #we do moving of the polymers now!
         #self.copy_polymers(enrich_candidates)
         
+        #calculate number of enrichments
         enriched = np.size(enrich_candidates)
 
         self.n += enriched - pruned
@@ -217,10 +207,12 @@ class PERMSimulation:
             else:
                 deleted, enriched, average_weight = (0,0,np.mean(self.pol_weights[:,self.iteration]))
 
+            # scale the polymer weight to prevent nasty overflows over time
             self.pol_weights[:,self.iteration] /= average_weight
             
             print_fl("I: %d\t n: %d\t p: %d\t e: %d\t w: %e" % (self.iteration, self.n, deleted, enriched, average_weight))
 
+    # nice n handy for saving simulation date
     def save_results(self, filename):
         result_variables = [rm for rm in dir(self) if rm.startswith("results_")]
         results = dict()
