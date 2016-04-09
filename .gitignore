@@ -2,3 +2,5 @@ InitData/
 Data/
 Extra/
 ForceData/
+
+*.npz
