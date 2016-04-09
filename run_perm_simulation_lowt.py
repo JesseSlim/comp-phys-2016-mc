@@ -9,8 +9,8 @@ sim = PERMSimulation()
 #Ts = np.arange(4.4, 6.2, 0.2)
 #Fs = np.concatenate((np.linspace(0.0, 0.1, 11), np.linspace(0.2, 1.0, 9)))
 
-Ts = np.array([0.2, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
-Fs = np.linspace(4.0, 8.0, 9)
+Ts = np.array([0.08])
+Fs = np.concatenate((np.linspace(0.0, 0.1, 11), np.linspace(0.2, 1.0, 9), np.linspace(1.25, 3.50, 10)))
 
 sim_id = str(sys.argv[1])
 
