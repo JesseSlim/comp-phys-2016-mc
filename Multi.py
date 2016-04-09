@@ -37,17 +37,24 @@ class Multi:
         for i in range(0,cpuCount): #Cpu count utilizes your computer. use cpu_count()-1 to do other things.
             cpuList.append(Process(target=Worker, args=(qm,qw)))
             cpuList[i].start();
-            qm.put((Var, i));
-            Var = Var + Add;
-            cpuStatus[i] = 1;
         
         # Increment the used values and run till it is complete;
-        while (not np.all(np.greater_equal(Var,Stop))):
+        
+        #while (not np.all(np.greater_equal(Var,Stop))):
+        #    if (not qw.empty()):
+        #        i = qw.get();
+        #        qm.put((Var, i));
+        #        Var = Var + Add
+        #    time.sleep(0.01);
+        while (Var[1] <= 4):
             if (not qw.empty()):
-                i = qw.get();
-                qm.put((Var, i));
-                Var = Var + Add
-            time.sleep(0.01);
+                qm.put((Var,i));
+                Var[4] = round(Var[4] + 0.2, 1);
+                if (Var[4] > 3):
+                    Var[4] = 0;
+                    Var[1] = round(Var[1] + 0.2, 1);
+                   
+           
         
         # Tell everyone this is the last job:
         for i in range(0,cpuCount):

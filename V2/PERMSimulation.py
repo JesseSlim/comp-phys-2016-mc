@@ -1,6 +1,11 @@
 import numpy as np
 import scipy.spatial
 import sys
+import warnings as warnings
+np.errstate(divide="ignore")
+np.errstate(over="ignore")
+np.errstate(invalid="ignore")
+warnings.filterwarnings("ignore")
 
 def print_fl(output):
     print(output)
@@ -21,8 +26,8 @@ class PERMSimulation:
     # alpha_hi = 1.8
     pol_weight_renormalization = 1/(0.75*6) # renormalization factor recommended by the book
     target_population = 0
-    F = 0.0
     enable_LJ_interaction = True
+    enable_pruning_enriching = True
     
     capital_Ws = None
     bead_energies = None
@@ -38,6 +43,9 @@ class PERMSimulation:
     results_energies = None
     
     def initialise(self, nIn, targetIn):
+        np.errstate(divide='ignore')
+        np.errstate(over='ignore')
+        np.errstate(invalid='ignore')
         self.n = nIn
         self.target_population = targetIn
         self.r = np.zeros((self.n, self.max_size, self.n_dim))
@@ -91,7 +99,6 @@ class PERMSimulation:
                 sq_distances = scipy.spatial.distance.cdist(candidate_r[i,:,:], self.r[i,0:self.iteration+1,:], 'sqeuclidean')
                 lj_potentials = self.V_LJ(sq_distances)
                 theta_energies[i,:] += np.sum(lj_potentials, axis = 1)
-            theta_energies[:,:] = theta_energies[:,:] + self.F * candidate_dr[:,:,0];
 
         # we scale nans to zero in the following section; if probabilities get too low the polymer gets pruned anyway
         theta_boltzmann = np.nan_to_num(np.exp(- theta_energies / self.T))
@@ -212,21 +219,21 @@ class PERMSimulation:
             self.calculate_results()
             
             # do pruning-enrichment magic
-            if self.iteration > 1:
+            if self.iteration > 1 and self.enable_pruning_enriching:
                 deleted, enriched, average_weight = self.prune_enrich()
+                self.pol_weights[:,self.iteration] = self.pol_weights[:,self.iteration] / average_weight
             else:
                 deleted, enriched, average_weight = (0,0,np.mean(self.pol_weights[:,self.iteration]))
-            
-            print_fl("I: %d\t n: %d\t p: %d\t e: %d\t w: %e" % (self.iteration, self.n, deleted, enriched, average_weight))
+            if (self.iteration%25 == 0):
+                print_fl("I: %d\t n: %d\t p: %d\t e: %d\t w: %e" % (self.iteration, self.n, deleted, enriched, average_weight))
 
     def save_results(self, filename):
-        result_variables = [rm for rm in dir(self) if rm.startswith("result_")]
+        result_variables = [rm for rm in dir(self) if rm.startswith("results_")]
         results = dict()
         for rm in result_variables:
-            results[rm[7:]] = getattr(self, rm)
+            results[rm[8:]] = getattr(self, rm)
 
         results["n"] = self.n
-        results["r"] = self.r
         results["max_size"] = self.max_size
         results["n_dim"] = self.n_dim
         results["epsilon"] = self.epsilon
@@ -237,5 +244,7 @@ class PERMSimulation:
         results["F"] = self.F
         results["enable_LJ_interaction"] = self.enable_LJ_interaction
         results["pol_weight_renormalization"] = self.pol_weight_renormalization
+
+        results["r"] = self.r
 
         np.savez(filename, **results)

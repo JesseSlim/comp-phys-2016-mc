@@ -22,7 +22,7 @@ polymer_count = 1E5                   # Amount of polymers that we are simulatin
 T = 1                                 # Temperature in kelvin
 epsilon = 0.25                        # Epsilon voor de lennard Jones
 sigma = 0.8                           # Sigma voor de Lennard Jones
-Force = 0;														# Force wit which we pull
+Force = 0.8;														# Force wit which we pull
 
 theta = 6                             # Number of angles
 theta_weight = np.zeros([theta,1])    # Weight of angles

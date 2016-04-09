@@ -12,3 +12,6 @@ hold on;
 for i = 1:1:size(Polymers,2)
     plot(Polymers{i}.BeadPosition(:,1), Polymers{i}.BeadPosition(:,2), '-o');
 end
+xlabel('x');
+ylabel('y');
+title('Growth of poylmers under influence of force');

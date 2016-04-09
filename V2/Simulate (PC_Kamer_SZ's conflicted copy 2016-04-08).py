@@ -15,10 +15,10 @@ warnings.filterwarnings("ignore")
 
 Var = np.array([
         250,   # Max polymer size
-        3.6,   # Temperature
+        0.2,   # Temperature
         0.25,  # Epsilon
         0.8,   # Sigma
-        2.8,   # Force
+        0.0,   # Force
         6,     # Theta
         10000, # Polymer count
         ]);
